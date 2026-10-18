@@ -1,0 +1,11 @@
+{
+  "task": "queen e4 to h4",
+  "fps": 30,
+  "frames": 801,
+  "seconds": 26.7,
+  "black_frames": {
+    "wrist": 0,
+    "webcam": 83
+  },
+  "board_calibrated": true
+}

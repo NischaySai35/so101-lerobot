@@ -1,0 +1,11 @@
+{
+  "task": "rook e3 to e5",
+  "fps": 30,
+  "frames": 986,
+  "seconds": 32.87,
+  "black_frames": {
+    "wrist": 0,
+    "webcam": 986
+  },
+  "board_calibrated": true
+}

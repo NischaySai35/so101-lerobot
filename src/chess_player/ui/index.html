@@ -1,0 +1,659 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SO-101 Chess</title>
+<style>
+  :root {
+    --bg: #0b0d11; --panel: #13161d; --panel2: #191d26; --line: #252a36; --text: #e8eaf0; --muted: #8a93a6;
+    --wood: #c8a46a; --wood2: #8b6a3e; --teal: #2ec4b6; --violet: #9b7bff; --amber: #f5a524; --red: #ef4b55;
+    --gold: #f2cc60; --r: 14px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; color: var(--text); background: var(--bg);
+    font: 13.5px/1.4 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, sans-serif; }
+  body { display: flex; flex-direction: column; overflow: hidden;
+    background: radial-gradient(1000px 520px at 50% -12%, rgba(200,164,106,.10), transparent 60%),
+                radial-gradient(700px 420px at 0% 100%, rgba(46,196,182,.07), transparent 60%),
+                repeating-linear-gradient(45deg, rgba(255,255,255,.012) 0 2px, transparent 2px 6px), var(--bg); }
+  .mono { font-family: ui-monospace, "JetBrains Mono", "DejaVu Sans Mono", monospace; }
+  button { font: inherit; color: var(--text); background: var(--panel2); border: 1px solid var(--line); border-radius: 10px;
+    padding: 7px 12px; cursor: pointer; transition: transform .06s, background .2s, border-color .2s; }
+  button:hover { border-color: #3a4152; background: #212634; } button:active { transform: translateY(1px); }
+  button.primary { background: linear-gradient(135deg, var(--wood), #a9844f); color: #1b130a; border: 0; font-weight: 700; }
+  button.go { background: linear-gradient(135deg, #36d6c7, #22a99c); color: #04201d; border: 0; font-weight: 700; }
+  button.sm { padding: 4px 9px; font-size: 12px; border-radius: 8px; }
+  input[type=text] { font: inherit; color: var(--text); background: #0e1117; border: 1px solid var(--line); border-radius: 10px;
+    padding: 7px 10px; outline: none; min-width: 0; }
+  input[type=text]:focus { border-color: var(--wood); box-shadow: 0 0 0 3px rgba(200,164,106,.15); }
+
+  /* header */
+  header { display: flex; align-items: center; gap: 14px; padding: 10px 16px; border-bottom: 1px solid var(--line); }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: .5px; }
+  .logo .k { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; font-size: 20px;
+    background: linear-gradient(135deg, var(--wood), var(--wood2)); color: #1a120a; box-shadow: 0 4px 18px rgba(200,164,106,.25); }
+  .logo small { display: block; font-weight: 500; color: var(--muted); font-size: 10.5px; letter-spacing: 1.5px; }
+  .pill { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: var(--panel2);
+    border: 1px solid var(--line); font-weight: 600; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); }
+  .pulse .dot { animation: pulse 1.6s infinite; }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 var(--c); } 70% { box-shadow: 0 0 0 9px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+  .controls { display: flex; gap: 6px; } .spacer { flex: 1; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { font-size: 10.5px; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted);
+    letter-spacing: .6px; text-transform: uppercase; white-space: nowrap; }
+  .chip.on { color: var(--text); border-color: rgba(46,196,182,.5); background: rgba(46,196,182,.08); }
+  .chip.warn { color: var(--amber); border-color: rgba(245,165,36,.5); background: rgba(245,165,36,.08); }
+
+  /* layout */
+  main { flex: 1; display: grid; grid-template-columns: 330px minmax(0, 1fr) 360px; gap: 14px; padding: 14px; min-height: 0; }
+  .col { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; position: relative; flex-shrink: 0; }
+  .card.grow { flex: 1 1 auto; min-height: 120px; display: flex; flex-direction: column; }
+  .head { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; border-bottom: 1px solid var(--line); gap: 8px; }
+  h3 { margin: 0; font-size: 10.5px; letter-spacing: 1.6px; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+
+  /* ---------- Robo panel ---------- */
+  .robo { padding: 14px 14px 10px; display: grid; gap: 12px; }
+  .face { position: relative; height: 128px; border-radius: 22px; background: radial-gradient(120% 120% at 50% 0%, #1f2532, #10131a);
+    border: 1px solid var(--line); display: grid; place-items: center; overflow: hidden; }
+  .face::before { content: ""; position: absolute; inset: 0; background:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.03) 0 1px, transparent 1px 4px); pointer-events: none; }
+  .ring { position: absolute; width: 150px; height: 150px; border-radius: 50%; border: 2px solid var(--teal); opacity: 0; }
+  .face.hearing .ring { animation: ring 1s infinite; }
+  @keyframes ring { from { transform: scale(.6); opacity: .8; } to { transform: scale(1.3); opacity: 0; } }
+  .eyes { display: flex; gap: 34px; transition: transform .3s; }
+  .eye { width: 26px; height: 26px; border-radius: 50%; background: var(--wood); box-shadow: 0 0 18px rgba(200,164,106,.6);
+    animation: blinkeye 5s infinite; transition: background .3s, box-shadow .3s; }
+  @keyframes blinkeye { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(.1); } }
+  .face.listening .eye { background: var(--teal); box-shadow: 0 0 18px rgba(46,196,182,.7); }
+  .face.hearing .eye { background: var(--teal); box-shadow: 0 0 26px rgba(46,196,182,.9); transform: scale(1.12); }
+  .face.thinking .eyes { transform: translateY(-10px); } .face.thinking .eye { background: var(--violet); box-shadow: 0 0 20px rgba(155,123,255,.7); }
+  .face.off .eye { background: #3a4152; box-shadow: none; }
+  .mouth { position: absolute; bottom: 24px; display: flex; gap: 4px; align-items: center; height: 18px; }
+  .mouth i { width: 5px; height: 4px; border-radius: 3px; background: var(--wood); opacity: .75; }
+  .face.speaking .mouth i { animation: talk .5s infinite ease-in-out; }
+  .face.speaking .mouth i:nth-child(2) { animation-delay: .1s; } .face.speaking .mouth i:nth-child(3) { animation-delay: .2s; }
+  .face.speaking .mouth i:nth-child(4) { animation-delay: .15s; } .face.speaking .mouth i:nth-child(5) { animation-delay: .05s; }
+  @keyframes talk { 0%, 100% { height: 4px; } 50% { height: 18px; } }
+  .face.thinking .mouth i { animation: think 1.2s infinite; } .face.thinking .mouth i:nth-child(n+4) { opacity: 0; }
+  @keyframes think { 0%, 100% { opacity: .2; } 50% { opacity: 1; } }
+  .facestate { position: absolute; top: 8px; left: 12px; font-size: 10.5px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted); }
+  .brain { position: absolute; top: 7px; right: 10px; }
+  .subtitle { min-height: 38px; font-size: 13px; color: #f3e6cc; font-style: italic; padding: 0 2px; }
+  .subtitle:empty::before { content: "…"; color: var(--muted); font-style: normal; }
+  .ctl { display: grid; grid-template-columns: 76px 1fr auto; align-items: center; gap: 8px; }
+  .ctl label { color: var(--muted); font-size: 11.5px; }
+  .switch { position: relative; width: 38px; height: 22px; border-radius: 999px; background: #2a2f3b; border: 1px solid var(--line);
+    cursor: pointer; transition: background .2s; flex-shrink: 0; }
+  .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%;
+    background: #9aa3b2; transition: left .2s, background .2s; }
+  .switch.on { background: rgba(46,196,182,.35); border-color: rgba(46,196,182,.6); } .switch.on::after { left: 18px; background: var(--teal); }
+  input[type=range] { width: 100%; accent-color: var(--wood); }
+  .meter { position: relative; height: 10px; border-radius: 6px; background: #0e1117; border: 1px solid var(--line); overflow: hidden; }
+  .meter .lvl { position: absolute; inset: 0 auto 0 0; width: 0; background: linear-gradient(90deg, #2ec4b6, #f5a524 80%, #ef4b55); transition: width .12s; }
+  .meter .thr { position: absolute; top: -2px; bottom: -2px; width: 2px; background: #fff; opacity: .8; }
+  .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .chat { flex: 1; overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+  .msg { max-width: 90%; padding: 6px 10px; border-radius: 12px; font-size: 12.5px; line-height: 1.35; }
+  .msg.robo { align-self: flex-start; background: linear-gradient(135deg, rgba(200,164,106,.18), rgba(200,164,106,.07));
+    border: 1px solid rgba(200,164,106,.35); border-bottom-left-radius: 4px; }
+  .msg.you { align-self: flex-end; background: rgba(46,196,182,.12); border: 1px solid rgba(46,196,182,.35); border-bottom-right-radius: 4px; }
+  .msg.sys, .msg.heard { align-self: center; color: var(--muted); font-size: 11px; padding: 1px 6px; text-align: center; }
+  .msg.heard::before { content: "🎙 heard: "; }
+  .msg small { display: block; font-size: 9.5px; color: var(--muted); margin-top: 2px; }
+  .ask { display: flex; gap: 6px; padding: 8px 10px; border-top: 1px solid var(--line); } .ask input { flex: 1; }
+
+  /* ---------- cameras ---------- */
+  .stage { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+  .cams { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .cam { position: relative; border-radius: var(--r); overflow: hidden; border: 1px solid var(--line); background: #06070a;
+    aspect-ratio: 4/3; cursor: zoom-in; transition: box-shadow .2s; }
+  .cam.web { aspect-ratio: 16/9; align-self: center; }
+  .cam img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .cam:hover { box-shadow: 0 0 0 2px rgba(200,164,106,.5); }
+  .cam .tag { position: absolute; left: 10px; top: 8px; font-size: 10.5px; letter-spacing: 1.4px; text-transform: uppercase;
+    background: rgba(10,12,16,.6); border: 1px solid rgba(255,255,255,.08); padding: 3px 8px; border-radius: 999px; backdrop-filter: blur(4px); }
+  .cam .tag::before { content: "●"; color: var(--red); margin-right: 6px; animation: blink 1.4s infinite; }
+  @keyframes blink { 50% { opacity: .25; } }
+  .cam .corner { position: absolute; width: 22px; height: 22px; border: 2px solid rgba(200,164,106,.8); }
+  .c1 { top: 8px; right: 8px; border-left: 0; border-bottom: 0; border-top-right-radius: 6px; }
+  .c2 { bottom: 8px; left: 8px; border-right: 0; border-top: 0; border-bottom-left-radius: 6px; }
+  .c3 { bottom: 8px; right: 8px; border-left: 0; border-top: 0; border-bottom-right-radius: 6px; }
+  .cams.focus { display: block; }
+  .cams.focus .cam.big { width: 100%; height: 54vh; aspect-ratio: auto; cursor: zoom-out; }
+  .cams.focus .cam.big img { object-fit: contain; }
+  .cams.focus .cam.pip { position: absolute; right: 12px; bottom: 12px; width: 28%; z-index: 2; box-shadow: 0 10px 30px rgba(0,0,0,.6); }
+  /* robot eye minimised: the watcher takes the whole width; a chip brings the robot eye back */
+  .cams.nowrist { grid-template-columns: 1fr; } .cams.nowrist .cam[data-cam=wrist] { display: none; }
+  .cam .min { position: absolute; right: 10px; top: 8px; z-index: 3; padding: 1px 8px; font-size: 12px; border-radius: 999px;
+    background: rgba(10,12,16,.6); }
+  #wristChip { display: none; position: absolute; left: 10px; bottom: 10px; z-index: 3; font-size: 11px; padding: 3px 10px; border-radius: 999px; }
+  .cams.nowrist #wristChip { display: block; }
+  .hint { color: var(--muted); font-size: 11px; text-align: right; margin-top: -6px; }
+
+  .statusbar { display: flex; align-items: center; gap: 14px; padding: 12px 14px; }
+  .status { font-size: 18px; font-weight: 650; flex: 1; }
+  /* whose turn: a big pill at the left of the status card */
+  .turnpill { flex: 0 0 auto; min-width: 168px; padding: 10px 16px; border-radius: 14px; text-align: center; line-height: 1.15;
+    border: 2px solid var(--line); background: var(--panel2); transition: background .3s, border-color .3s; }
+  .turnpill b { display: block; font-size: 17px; letter-spacing: .5px; }
+  .turnpill small { display: block; font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+  .turnpill.robot { border-color: var(--amber); background: linear-gradient(135deg, rgba(245,165,36,.22), rgba(245,165,36,.06)); }
+  .turnpill.robot b { color: var(--amber); }
+  .turnpill.you { border-color: var(--teal); background: linear-gradient(135deg, rgba(46,196,182,.25), rgba(46,196,182,.06));
+    animation: pulse 1.6s ease-in-out infinite; }
+  .turnpill.you b { color: var(--teal); }
+  .turnpill.help { border-color: var(--red); background: linear-gradient(135deg, rgba(239,75,85,.25), rgba(239,75,85,.06)); }
+  .turnpill.help b { color: #ffc2c6; }
+  .turnpill.over b { color: var(--gold); }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 6px rgba(46,196,182,.15); } }
+  .status small { display: block; font-size: 12px; color: var(--muted); font-weight: 500; margin-top: 2px; }
+  .typer { display: flex; gap: 6px; } .typer input { width: 190px; }
+  .help { display: none; margin: 0 14px 12px; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(239,75,85,.55);
+    background: linear-gradient(135deg, rgba(239,75,85,.12), rgba(239,75,85,.04)); }
+  .help.show { display: block; animation: rise .25s ease-out; }
+  @keyframes rise { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .help b { color: #ffc2c6; } .help p { margin: 4px 0 8px; color: var(--muted); font-size: 12px; }
+  .plan { display: flex; gap: 8px; padding: 0 14px 12px; overflow-x: auto; }
+  .step { flex: 0 0 auto; padding: 8px 10px; border-radius: 10px; background: var(--panel2); border: 1px solid var(--line); font-size: 12px; }
+  .step b { display: block; font-size: 12.5px; } .step span { color: var(--muted); }
+  .step.bad { border-color: rgba(239,75,85,.55); }
+
+  /* ---------- right column ---------- */
+  .boardwrap { display: grid; grid-template-columns: 12px 1fr; gap: 10px; padding: 10px 12px 6px; }
+  .evalbar { border-radius: 8px; overflow: hidden; background: #2a2f3b; position: relative; border: 1px solid var(--line); }
+  .evalbar .white { position: absolute; left: 0; right: 0; bottom: 0; background: linear-gradient(0deg, #f4f1e8, #d9d3c3); transition: height .6s; }
+  #board { width: 100%; display: block; border-radius: 8px; }
+  .bview { position: relative; }
+  .hov { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr);
+    padding: calc(100% * 15 / 390); }
+  .hov div { position: relative; }
+  .hov div.src { box-shadow: inset 0 0 0 3px rgba(46,196,182,.9); }
+  .hov div.dst::after { content: ""; position: absolute; left: 36%; top: 36%; width: 28%; height: 28%; border-radius: 50%;
+    background: rgba(46,196,182,.75); }
+  .hov div.cap::after { content: ""; position: absolute; inset: 6%; border-radius: 50%; border: 3px solid rgba(239,75,85,.85); }
+  .hov div.unsure { box-shadow: inset 0 0 0 2px rgba(245,165,36,.95); }
+  .hovinfo { min-height: 17px; padding: 2px 12px 0; font-size: 11.5px; color: var(--muted); }
+  .turnsel { display: inline-flex; gap: 4px; align-items: center; }
+  .turnsel button.on { border-color: var(--teal); color: var(--teal); }
+  .meta { display: flex; justify-content: space-between; padding: 0 12px 8px; color: var(--muted); font-size: 12px; }
+  .moves { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 12px 10px; max-height: 50px; overflow-y: auto; }
+  .moves span { font-size: 11.5px; padding: 1px 6px; border-radius: 6px; background: var(--panel2); border: 1px solid var(--line); }
+  .moves span.n { background: transparent; border: 0; color: var(--muted); padding-right: 0; }
+  .moves span:last-child { border-color: var(--wood); color: var(--wood); }
+  .manual { padding: 10px 12px; display: grid; gap: 8px; }
+  .manual input[type=text] { width: 64px; text-align: center; font-size: 15px; text-transform: lowercase; }
+  .arrow { color: var(--wood); font-size: 18px; }
+  .check { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 11.5px; }
+  .log { padding: 8px 12px; font-size: 10.5px; color: var(--muted); overflow-y: auto; white-space: pre-wrap; flex: 1; }
+  .bbtns { display: flex; gap: 6px; padding: 0 12px 10px; }
+  .bbtns button { flex: 1; }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  .modal { position: fixed; inset: 0; background: rgba(5,6,9,.72); backdrop-filter: blur(4px); display: none; place-items: center; z-index: 20; }
+  .modal.show { display: grid; }
+  .editor { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 18px; display: grid;
+    grid-template-columns: auto 250px; gap: 18px; box-shadow: 0 30px 80px rgba(0,0,0,.6); }
+  .ed-board { display: grid; grid-template-columns: 18px repeat(8, 52px); grid-template-rows: repeat(8, 52px) 18px;
+    border-radius: 10px; overflow: hidden; }
+  .ed-sq { display: grid; place-items: center; font-size: 38px; cursor: pointer; user-select: none; line-height: 1; }
+  .ed-sq.l { background: #e9dcc0; } .ed-sq.d { background: #a7794f; }
+  .ed-sq:hover { box-shadow: inset 0 0 0 3px rgba(46,196,182,.8); }
+  .ed-sq.unsure { box-shadow: inset 0 0 0 3px rgba(245,165,36,.9); }
+  .pw { color: #fbfaf5; text-shadow: 0 0 2px #000, 0 0 1px #000, 0 1px 2px #000; }
+  .pb { color: #1d1a17; text-shadow: 0 0 2px rgba(255,255,255,.4); }
+  .ed-lab { display: grid; place-items: center; color: var(--muted); font-size: 11px; }
+  .palette { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+  .pal { font-size: 26px; height: 40px; display: grid; place-items: center; border-radius: 8px; background: #2a2f3b;
+    border: 1px solid var(--line); cursor: pointer; user-select: none; }
+  .pal.sel { border-color: var(--teal); box-shadow: 0 0 0 2px rgba(46,196,182,.35); }
+  .pal.erase { font-size: 14px; grid-column: span 6; height: 30px; color: var(--muted); }
+  .ed-side { display: grid; gap: 10px; align-content: start; }
+  .ed-side textarea { font: 11px ui-monospace, monospace; color: var(--text); background: #0e1117; border: 1px solid var(--line);
+    border-radius: 10px; padding: 8px; resize: none; height: 64px; }
+  .ed-note { color: var(--muted); font-size: 11.5px; }
+  .estop { background: linear-gradient(135deg, #ff4d57, #c9252f); color: #fff; border: 0; font-weight: 800;
+    letter-spacing: 1px; padding: 9px 18px; box-shadow: 0 0 0 3px rgba(239,75,85,.25), 0 6px 18px rgba(239,75,85,.35); }
+  .estop:hover { background: linear-gradient(135deg, #ff6a72, #d9323c); }
+  #torqueBtn.limp { border-color: rgba(245,165,36,.7); color: var(--amber); background: rgba(245,165,36,.1); }
+  .toast { position: fixed; right: 18px; bottom: 18px; background: var(--panel2); border: 1px solid var(--line); border-radius: 12px;
+    padding: 9px 14px; opacity: 0; transform: translateY(10px); transition: all .25s; pointer-events: none; max-width: 380px; z-index: 9; }
+  .toast.show { opacity: 1; transform: none; } .toast.err { border-color: rgba(239,75,85,.6); }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><div class="k">♞</div><div>SO-101 CHESS<small>ROBOT · VISION · STOCKFISH · ROBO</small></div></div>
+  <div class="pill pulse" id="phasePill"><span class="dot" id="phaseDot"></span><span id="phaseText">starting</span></div>
+  <div class="controls">
+    <button class="primary" id="playBtn" title="Space">▶ Play</button>
+    <button id="movedBtn" title="I made my move on the board">✋ I moved</button>
+    <button id="undoBtn">↶ Undo</button>
+    <button id="newBtn">⟲ New game</button>
+    <button id="homeBtn">⌂ Home</button>
+  </div>
+  <div class="spacer"></div>
+  <button id="torqueBtn" title="motors limp / holding">🔓 Torque off</button>
+  <button id="stopBtn" class="estop" title="Emergency stop (Esc): freeze the arm now">■ STOP</button>
+  <div class="chips" id="chips"></div>
+</header>
+
+<main>
+  <!-- ======== left: Robo ======== -->
+  <section class="col">
+    <div class="card">
+      <div class="robo">
+        <div class="face off" id="face">
+          <span class="facestate" id="faceState">offline</span>
+          <span class="chip brain" id="brainChip">🧠 —</span>
+          <div class="ring"></div>
+          <div class="eyes"><div class="eye"></div><div class="eye"></div></div>
+          <div class="mouth"><i></i><i></i><i></i><i></i><i></i></div>
+        </div>
+        <div class="subtitle" id="subtitle"></div>
+        <div class="ctl"><label>Voice</label><span></span><div class="switch on" id="voiceSw" title="Robo talks"></div></div>
+        <div class="ctl"><label>Volume</label><input type="range" id="vol" min="0" max="150" value="100"><span class="mono" id="volTxt">100%</span></div>
+        <div class="ctl"><label>Speed</label><input type="range" id="spd" min="60" max="160" value="100"><span class="mono" id="spdTxt">1.0×</span></div>
+        <div class="row"><button class="sm" id="stopTalk">⏹ Stop talking</button><button class="sm" id="testVoice">🔈 Test voice</button></div>
+        <div class="ctl"><label>Microphone</label><div class="meter" title="your voice level / white line = trigger level"><div class="lvl" id="lvl"></div><div class="thr" id="thr"></div></div><div class="switch on" id="micSw" title="Robo listens"></div></div>
+        <div class="ctl"><label>Sensitivity</label><input type="range" id="sens" min="15" max="80" value="30" title="left = reacts to quieter speech"><span class="mono" id="sensTxt">3.0</span></div>
+        <div class="ctl"><label>Wake word</label><span class="mono" id="wakeTxt" style="color:var(--muted);font-size:11.5px">say "robot, …"</span><div class="switch on" id="wakeSw" title="spoken commands must start with 'robot'"></div></div>
+      </div>
+    </div>
+    <div class="card grow">
+      <div class="head"><h3>Conversation</h3><span class="chip" id="micChip">mic</span></div>
+      <div class="chat" id="chat"></div>
+      <div class="ask">
+        <input type="text" id="askInput" placeholder="Ask or tell Robo… (what can you see?)">
+        <button class="go" id="askBtn">Send</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======== centre: cameras + status ======== -->
+  <section class="stage">
+    <div class="cams" id="cams">
+      <div class="cam" data-cam="wrist"><img src="/stream/wrist" alt="robot camera"><span class="tag" id="eyeTag">Robot eye</span><button class="min" id="wristMin" title="minimise the robot eye">–</button>
+        <button class="min" id="eyeCal" style="right:44px" title="fit the robot eye's view of the board again (arm goes to the look pose)">⟳ calibrate</button>
+        <div class="corner c1"></div><div class="corner c2"></div><div class="corner c3"></div></div>
+      <div class="cam web" data-cam="web"><img src="/stream/ext" alt="webcam"><span class="tag" id="webTag">Watcher</span>
+        <div class="corner c1"></div><div class="corner c2"></div><div class="corner c3"></div></div>
+      <button class="sm" id="wristChip" title="show the robot (gripper) camera">▣ Robot eye</button>
+    </div>
+    <div class="hint">click a camera to enlarge it</div>
+    <div class="card">
+      <div class="statusbar">
+        <div class="turnpill" id="turnPill"><b>—</b><small>&nbsp;</small></div>
+        <div class="status" id="status">Starting up…<small id="substatus">&nbsp;</small></div>
+        <div class="typer"><input type="text" id="moveInput" placeholder="your move: e5 / Nf6 / e7e5" title="your move when it's your turn: SAN (e5, Nf6, exd4, O-O, e8=Q) or from-to (e7e5)"><button class="go" id="moveBtn">Send my move</button></div>
+      </div>
+      <div class="help" id="help"></div>
+      <div class="plan" id="plan"></div>
+    </div>
+  </section>
+
+  <!-- ======== right: board, manual, log ======== -->
+  <section class="col">
+    <div class="card">
+      <div class="head"><h3>Board</h3><span class="mono" id="evalText" style="color:var(--wood)">0.00</span></div>
+      <div class="boardwrap">
+        <div class="evalbar" title="White's advantage"><div class="white" id="evalWhite" style="height:50%"></div></div>
+        <div class="bview"><img id="board" src="/board.svg" alt="board"><div class="hov" id="hov"></div></div>
+      </div>
+      <div class="hovinfo" id="hovInfo">hover a piece: its moves + what the camera sees</div>
+      <div class="meta"><span id="turnText">—</span>
+        <span class="turnsel" id="turnSel" title="who moves first (before you press Play)">first:
+          <button class="sm" id="tW">White</button><button class="sm" id="tB">Black</button></span>
+        <span id="colorText">—</span></div>
+      <div class="moves mono" id="moves"></div>
+      <div class="bbtns">
+        <button class="sm" id="editBtn" title="make the game match the real board">✎ Edit position</button>
+        <button class="sm" id="readBtn" title="read the real board with YOLO">📷 Read board</button>
+        <button class="sm" id="recheckBtn" title="read the real board again and re-sync">⟳ Recheck</button>
+        <button class="sm" id="startBtn" title="normal start position">↺ Start</button>
+      </div>
+      <div class="ctl" style="padding:0 12px 10px;grid-template-columns:1fr auto auto">
+        <label id="syncTxt">Live sync with the real board</label><span class="chip" id="syncChip">—</span>
+        <div class="switch" id="syncSw" title="the game board follows what the webcam sees (not during a game)"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="head"><h3>Manual pick &amp; place</h3><span class="chip">any squares</span></div>
+      <div class="manual">
+        <div class="row">
+          <input type="text" id="fromSq" maxlength="2" placeholder="e4" class="mono"><span class="arrow">➜</span>
+          <input type="text" id="toSq" maxlength="2" placeholder="a3" class="mono"><button class="go" id="manualBtn">Move piece</button>
+        </div>
+        <label class="check"><input type="checkbox" id="syncChk" checked> also update the game position</label>
+      </div>
+    </div>
+    <div class="card grow">
+      <div class="head"><h3>Log</h3><span class="chip" id="armChip">arm</span></div>
+      <div class="log mono" id="log"></div>
+    </div>
+  </section>
+</main>
+<div class="toast" id="toast"></div>
+<div class="modal" id="modal">
+  <div class="editor">
+    <div class="ed-board" id="edBoard"></div>
+    <div class="ed-side">
+      <h3>Edit position</h3>
+      <div class="ed-note">Pick a piece, then click squares. Click a square again with the same piece to empty it.
+        Drawn from your side, like the real board.</div>
+      <div class="palette" id="palette"></div>
+      <div class="row"><label class="ed-note">Side to move</label>
+        <button class="sm" id="edTurn">white</button></div>
+      <textarea id="edFen" spellcheck="false" title="FEN: paste one here"></textarea>
+      <div class="row">
+        <button class="sm" id="edStart">Start</button><button class="sm" id="edClear">Clear</button>
+        <button class="sm" id="edCurrent">Current</button><button class="sm" id="edRead">📷 Camera</button>
+      </div>
+      <div class="ed-note" id="edMsg"></div>
+      <div class="row"><button class="go" id="edApply">Apply</button><button id="edCancel">Cancel</button></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const PHASE = { starting: ["Starting", "var(--muted)"], idle: ["Ready", "var(--muted)"], watching: ["Watching", "var(--teal)"],
+  thinking: ["Thinking", "var(--violet)"], moving: ["Moving", "var(--amber)"], need_help: ["Needs you", "var(--red)"],
+  game_over: ["Game over", "var(--gold)"], stopped: ["STOPPED", "var(--red)"] };
+let last = {}, boardKey = "", dragging = {};
+
+async function post(url, body, quiet) {
+  try {
+    const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body || {}) });
+    const j = await r.json();
+    if (!r.ok) toast(j.error || "error", true); else if (j.queued && !quiet) toast("✓ " + j.queued);
+    return j;
+  } catch (e) { toast("server not reachable", true); }
+}
+const act = (a) => post("/api/action", { action: a });
+const voice = (a, v) => post("/api/voice", { action: a, value: v }, true);
+function toast(msg, err) { const t = $("toast"); t.textContent = msg; t.className = "toast show" + (err ? " err" : "");
+  clearTimeout(t._h); t._h = setTimeout(() => (t.className = "toast"), 2400); }
+function esc(t) { return String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+function evalPct(e) { const m = /mate in (-?\d+)/.exec(e || ""); if (m) return parseInt(m[1]) > 0 ? 97 : 3;
+  const v = parseFloat(e); return isNaN(v) ? 50 : 50 + 50 * Math.tanh(v / 4); }
+
+function renderHelp(s) {
+  const h = $("help");
+  if (!s.help) { h.className = "help"; h.innerHTML = ""; return; }
+  const k = s.help.kind; let html = "";
+  if (k === "robot_by_hand") html = `<b>Please play <span class="mono">${esc(s.help.san)}</span> for me by hand.</b><p>${esc(s.help.why || "")}</p><button class="go" onclick="act('done_by_hand')">Done, I moved it</button>`;
+  else if (k === "fix_board") html = `<b>The board doesn't look right.</b><p>${esc(s.help.why || "")}</p><button class="go" onclick="act('done_by_hand')">Fixed it</button>`;
+  else if (k === "which_move") html = `<b>Which move did you play?</b><p>${esc(s.help.why || "")}. Pick one, or type it.</p><div class="row">` +
+    (s.help.candidates || []).map((m) => `<button onclick="post('/api/human_move',{move:'${m}'})">${esc(m)}</button>`).join("") + `</div>`;
+  h.innerHTML = html; h.className = "help show";
+}
+function renderPlan(s) {
+  const p = (s.plan || []).map((st) => st.ok
+    ? `<div class="step"><b>${esc(st.step)}</b><span>${esc(st.route)} · up ${st.z_travel_mm} mm · tilt ${st.max_grasp_tilt_deg}° · ~${st.est_seconds}s</span></div>`
+    : `<div class="step bad"><b>${esc(st.step)}</b><span>${esc(st.details || "not possible")}</span></div>`).join("");
+  if (p !== last.plan) { $("plan").innerHTML = p; last.plan = p; }
+}
+function setSwitch(id, on) { $(id).classList.toggle("on", !!on); }
+function renderRobo(r) {
+  const face = $("face");
+  if (!r) { face.className = "face off"; $("faceState").textContent = "off (--no-voice)"; return; }
+  const mode = r.speaking ? "speaking" : r.thinking ? "thinking" : r.mic === "hearing" ? "hearing"
+             : (r.mic === "listening" || r.mic === "transcribing") ? "listening" : "idle";
+  face.className = "face " + mode;
+  $("faceState").textContent = { speaking: "speaking", thinking: "thinking", hearing: "hearing you",
+    listening: r.mic === "transcribing" ? "understanding…" : "listening", idle: r.mic === "starting" ? "ears warming up" : "idle" }[mode];
+  $("brainChip").textContent = "🧠 " + r.brain; $("brainChip").className = "chip brain " + (r.brain === "ready" ? "on" : "warn");
+  $("subtitle").textContent = r.saying ? "“" + r.saying + "”" : "";
+  setSwitch("voiceSw", r.voice_out && !r.muted); setSwitch("micSw", r.mic !== "off"); setSwitch("wakeSw", r.wake_required);
+  $("wakeTxt").textContent = r.wake_required ? `say "${(r.wake_words || ["robot"])[0]}, …"` : "always listening";
+  if (!dragging.vol) { $("vol").value = Math.round(r.volume * 100); $("volTxt").textContent = Math.round(r.volume * 100) + "%"; }
+  if (!dragging.spd) { $("spd").value = Math.round(r.speed * 100); $("spdTxt").textContent = r.speed.toFixed(1) + "×"; }
+  if (!dragging.sens) { $("sens").value = Math.round(r.sensitivity * 10); $("sensTxt").textContent = r.sensitivity.toFixed(1); }
+  const scale = (x) => Math.min(100, (Math.log10(1 + x) / Math.log10(1 + 12000)) * 100);
+  $("lvl").style.width = (r.mic === "off" ? 0 : scale(r.level)) + "%"; $("thr").style.left = scale(r.threshold) + "%";
+  $("micChip").textContent = "🎙 " + r.mic; $("micChip").className = "chip " + (r.mic === "off" ? "warn" : "on");
+  const html = r.chat.map((m) => `<div class="msg ${m.who}">${esc(m.text)}${m.who === "robo" || m.who === "you" ? `<small>${m.t}</small>` : ""}</div>`).join("");
+  if (html !== last.chat) { $("chat").innerHTML = html; $("chat").scrollTop = 1e6; last.chat = html; }
+}
+function render(s) {
+  const [label, col] = PHASE[s.phase] || [s.phase, "var(--muted)"];
+  $("phaseText").textContent = label + (s.mode === "playing" ? "" : " · paused");
+  $("phaseDot").style.background = col; $("phasePill").style.setProperty("--c", col);
+  $("phasePill").classList.toggle("pulse", s.mode === "playing" || s.busy);
+  $("playBtn").textContent = s.mode === "playing" ? "⏸ Pause" : "▶ Play";
+  const parts = s.status.split(/(?<=\.)\s/);
+  $("status").firstChild.nodeValue = parts[0] + " ";
+  $("substatus").textContent = parts.slice(1).join(" ") || (s.busy ? "working…" : " ");
+  $("movedBtn").style.display = s.vision === "yolo" ? "none" : "";
+  $("torqueBtn").textContent = s.torque ? "🔓 Torque off" : "🔒 Torque on";
+  $("torqueBtn").classList.toggle("limp", !s.torque);
+  $("chips").innerHTML = [["arm " + s.arm, s.arm === "connected"], ["vision " + s.vision, s.vision !== "off"], ["yolo", s.yolo], ["stockfish", true]]
+    .map(([t, ok]) => `<span class="chip ${ok ? "on" : "warn"}">${t}</span>`).join("");
+  $("webTag").textContent = s.yolo ? `Watcher · yolo ${s.yolo_kind === "own" ? "" : "(pretrained)"}${s.watcher_age != null ? " " + s.watcher_age + "s" : ""}` : "Watcher · grid";
+  $("armChip").textContent = s.arm; $("armChip").className = "chip " + (s.arm === "connected" ? "on" : "warn");
+  setSwitch("syncSw", s.live_sync);
+  const nd = (s.seen_diff || []).length;
+  $("syncChip").textContent = s.seen_age == null ? "camera off" : nd ? `${nd} differ` : "in sync";
+  $("syncChip").className = "chip " + (s.seen_age == null ? "warn" : nd ? "warn" : "on");
+  $("syncTxt").title = nd ? "red squares on the board: the camera sees something else there: " + s.seen_diff.join(" ") : "";
+  const key = s.fen + JSON.stringify(s.help) + (s.seen_diff || []).join(",");
+  if (key !== boardKey) { boardKey = key; $("board").src = "/board.svg?t=" + Date.now(); }
+  $("evalText").textContent = s.eval; $("evalWhite").style.height = evalPct(s.eval) + "%";
+  $("turnText").textContent = (s.turn === s.robot_color ? "Robot" : "You") + " to move (" + s.turn + ")";
+  $("turnSel").style.visibility = s.mode === "playing" ? "hidden" : "visible";
+  $("tW").className = "sm" + (s.turn === "white" ? " on" : ""); $("tB").className = "sm" + (s.turn === "black" ? " on" : "");
+  renderHover(s);
+  renderTurn(s);
+  const eye = (s.hover && s.hover.eye) || "off";
+  $("eyeTag").textContent = "Robot eye · " + eye; $("wristChip").textContent = "▣ Robot eye · " + eye;
+  $("colorText").textContent = "robot plays " + s.robot_color;
+  let mv = ""; s.moves.forEach((m, i) => { if (i % 2 === 0) mv += `<span class="n">${i / 2 + 1}.</span>`; mv += `<span>${esc(m)}</span>`; });
+  if (mv !== last.mv) { $("moves").innerHTML = mv; $("moves").scrollTop = 1e6; last.mv = mv; }
+  const lg = s.log.join("\n"); if (lg !== last.lg) { $("log").textContent = lg; $("log").scrollTop = 1e6; last.lg = lg; }
+  $("readBtn").disabled = !s.yolo; $("edRead").disabled = !s.yolo;
+  $("readBtn").title = s.yolo ? `read the real board with YOLO (${s.yolo_kind} model)` : "no YOLO model";
+  renderHelp(s); renderPlan(s); renderRobo(s.robo); last.s = s;
+}
+async function poll() { try { render(await (await fetch("/api/state")).json()); } catch (e) { $("phaseText").textContent = "offline"; } setTimeout(poll, 250); }
+
+document.querySelectorAll(".cam").forEach((c) => (c.onclick = () => {
+  const cams = $("cams"), big = c.classList.contains("big");
+  document.querySelectorAll(".cam").forEach((x) => x.classList.remove("big", "pip"));
+  if (big) { cams.classList.remove("focus"); return; }
+  cams.classList.add("focus"); c.classList.add("big");
+  document.querySelectorAll(".cam").forEach((x) => { if (x !== c) x.classList.add("pip"); });
+  cams.insertBefore(c, cams.firstChild);
+}));
+// ---- robot eye minimise (remembered in this browser)
+function setWrist(show) {
+  const cams = $("cams");
+  if (!show && cams.classList.contains("focus")) { document.querySelectorAll(".cam").forEach((x) => x.classList.remove("big", "pip")); cams.classList.remove("focus"); }
+  cams.classList.toggle("nowrist", !show);
+  const img = document.querySelector(".cam[data-cam=wrist] img");
+  img.src = show ? "/stream/wrist?t=" + Date.now() : "";  // no stream while hidden
+  try { localStorage.setItem("wristShown", show ? "1" : "0"); } catch (e) {}
+}
+$("wristMin").onclick = (e) => { e.stopPropagation(); setWrist(false); };
+$("wristChip").onclick = () => setWrist(true);
+$("eyeCal").onclick = (e) => { e.stopPropagation(); act("calibrate_eye"); };
+{ let shown = "0"; try { shown = localStorage.getItem("wristShown") || "0"; } catch (e) {} setWrist(shown === "1"); }
+
+// ---- big "whose turn" pill
+function renderTurn(s) {
+  const robotTurn = s.turn === s.robot_color;
+  let cls = "", head, sub;
+  if (s.phase === "game_over") { cls = "over"; head = "GAME OVER"; sub = "press New game"; }
+  else if (s.phase === "stopped") { cls = "help"; head = "■ STOPPED"; sub = "press ▶ Play to continue"; }
+  else if (s.help || s.phase === "need_help") { cls = "help"; head = "⚠ NEEDS YOU"; sub = "see the message →"; }
+  else if (s.mode !== "playing") { head = "⏸ PAUSED"; sub = (robotTurn ? "robot moves" : "you move") + " first · press ▶ Play"; }
+  else if (robotTurn) {
+    cls = "robot"; head = "🤖 ROBOT'S TURN";
+    sub = s.phase === "thinking" ? "thinking…" : s.phase === "moving" ? "moving a piece…" : "running…";
+  } else { cls = "you"; head = "🫵 YOUR TURN"; sub = "make your move (" + s.turn + ")"; }
+  const el = $("turnPill"), html = `<b>${head}</b><small>${sub}</small>`;
+  if (el.className !== "turnpill " + cls) el.className = "turnpill " + cls;
+  if (el.innerHTML !== html) el.innerHTML = html;
+}
+
+// ---- who moves first
+$("tW").onclick = () => post("/api/action", { action: "turn_white" });
+$("tB").onclick = () => post("/api/action", { action: "turn_black" });
+
+// ---- board hover: possible moves + camera reading of the square
+let hovSq = null;
+function sqAt(i, s) {  // overlay cell i (row-major, top-left first) -> square name, board drawn from the human's side
+  const r = Math.floor(i / 8), c = i % 8, blackView = s.robot_color === "white";
+  const file = blackView ? 7 - c : c, rank = blackView ? r : 7 - r;
+  return "abcdefgh"[file] + (rank + 1);
+}
+function pieceMap(fen) {
+  const m = {}, rows = fen.split(" ")[0].split("/");
+  rows.forEach((row, i) => { let f = 0; for (const ch of row) { if (/\d/.test(ch)) f += +ch; else { m["abcdefgh"[f] + (8 - i)] = ch; f++; } } });
+  return m;
+}
+const PNAME = { k: "king", q: "queen", r: "rook", b: "bishop", n: "knight", p: "pawn" };
+function renderHover(s) {
+  const hov = $("hov");
+  if (!hov.children.length) for (let i = 0; i < 64; i++) {
+    const d = document.createElement("div"); d.dataset.i = i;
+    d.onmouseenter = () => { hovSq = sqAt(i, last.s || s); renderHover(last.s || s); };
+    hov.appendChild(d);
+  }
+  hov.onmouseleave = () => { hovSq = null; renderHover(last.s || s); };
+  const pm = pieceMap(s.fen), h = s.hover || { moves: {}, det: {} };
+  const targets = new Set(hovSq && pm[hovSq] ? h.moves[hovSq] || [] : []);
+  [...hov.children].forEach((d, i) => {
+    const sq = sqAt(i, s), det = h.det[sq];
+    // orange: the two cameras disagree, or only the webcam sees it and isn't sure
+    const unsure = det && (det[5] === false || (det[5] !== true && (det[1] < 0.8 || det[3])));
+    d.className = (sq === hovSq && pm[sq] ? "src " : "") + (targets.has(sq) ? (pm[sq] ? "cap " : "dst ") : "") + (unsure ? "unsure" : "");
+  });
+  let info = "hover a piece: its moves + what the camera sees (orange = unsure reading)";
+  if (hovSq) {
+    const p = pm[hovSq], det = h.det[hovSq];
+    info = hovSq + ": " + (p ? (p === p.toUpperCase() ? "white " : "black ") + PNAME[p.toLowerCase()] + " · " + targets.size + " moves" : "empty");
+    const nm = (x) => (x === x.toUpperCase() ? "white " : "black ") + PNAME[x.toLowerCase()];
+    if (det) {
+      info += ` · webcam: ${nm(det[0])} ${Math.round(det[1] * 100)}%` + (det[2] != null ? `, ${det[2]} mm` : "") + (det[3] ? ` (${det[3]})` : "");
+      if (det[4]) info += ` · robot eye: ${nm(det[4][0])} ${Math.round(det[4][1] * 100)}% ` + (det[5] ? "✓ agree" : "✗ disagree");
+      else if (det.length > 4) info += " · robot eye: can't see it";
+    } else if (s.seen_age != null) info += " · webcam: nothing";
+  }
+  if ($("hovInfo").textContent !== info) $("hovInfo").textContent = info;
+}
+
+$("playBtn").onclick = async () => {
+  const playing = last.s && last.s.mode === "playing";
+  const j = await post("/api/action", { action: playing ? "pause" : "play" }, true);
+  if (j && !j.error) toast(playing ? "⏸ paused" : (last.s && last.s.turn === last.s.robot_color ? "▶ playing: the robot moves now" : "▶ playing: your move"));
+};
+$("movedBtn").onclick = () => act("i_moved"); $("undoBtn").onclick = () => act("undo");
+$("newBtn").onclick = () => { if (confirm("Start a new game?")) act("new_game"); }; $("homeBtn").onclick = () => act("home");
+const sendMove = () => { const v = $("moveInput").value.trim();
+  if (!v) return toast("type YOUR move first (e.g. e5, Nf6, e7e5). To make the robot move, press ▶ Play at the top.", true);
+  post("/api/human_move", { move: v }); $("moveInput").value = ""; };
+$("moveBtn").onclick = sendMove; $("moveInput").onkeydown = (e) => { if (e.key === "Enter") sendMove(); };
+const sendManual = () => { const f = $("fromSq").value.trim().toLowerCase(), t = $("toSq").value.trim().toLowerCase();
+  if (!/^[a-h][1-8]$/.test(f) || !/^[a-h][1-8]$/.test(t)) return toast("squares like e4 and a3", true);
+  post("/api/manual", { from: f, to: t, sync: $("syncChk").checked }); };
+$("manualBtn").onclick = sendManual; $("toSq").onkeydown = (e) => { if (e.key === "Enter") sendManual(); };
+$("fromSq").oninput = (e) => { if (e.target.value.length === 2) $("toSq").focus(); };
+const r = () => (last.s && last.s.robo) || {};
+$("voiceSw").onclick = () => voice(r().muted || !r().voice_out ? "unmute" : "mute");
+$("micSw").onclick = () => { if (r().mic === "starting") return toast("the microphone is still starting (Whisper is loading)");
+  voice(r().mic === "off" ? "mic_on" : "mic_off"); };
+$("wakeSw").onclick = () => voice(r().wake_required ? "wake_off" : "wake_on");
+$("stopTalk").onclick = () => voice("stop_talking");
+$("testVoice").onclick = () => voice("say", "Testing, one, two. If you can hear this, my mouth works. My jokes, less so.");
+const slider = (id, txt, fmt, send) => {
+  $(id).oninput = (e) => { dragging[id] = true; $(txt).textContent = fmt(e.target.value); };
+  $(id).onchange = (e) => { dragging[id] = false; send(e.target.value); };
+};
+slider("vol", "volTxt", (v) => v + "%", (v) => voice("volume", v / 100));
+slider("spd", "spdTxt", (v) => (v / 100).toFixed(1) + "×", (v) => voice("speed", v / 100));
+slider("sens", "sensTxt", (v) => (v / 10).toFixed(1), (v) => voice("sensitivity", v / 10));
+const ask = () => { const v = $("askInput").value.trim(); if (v) { post("/api/ask", { text: v }, true); $("askInput").value = ""; } };
+$("askBtn").onclick = ask; $("askInput").onkeydown = (e) => { if (e.key === "Enter") ask(); };
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") { e.preventDefault(); estop(); return; }
+  if (e.code === "Space" && !["INPUT", "BUTTON"].includes(document.activeElement.tagName)) { e.preventDefault(); $("playBtn").click(); }
+});
+// ---------------- position editor ----------------
+const GLYPH = { K: "♔", Q: "♕", R: "♖", B: "♗", N: "♘", P: "♙", k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟" };
+let ed = { grid: {}, sel: "P", turn: "w", unsure: [], fromCamera: false };
+const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+function fenToGrid(fen) {
+  const g = {}, [rows, turn] = fen.trim().split(/\s+/);
+  rows.split("/").forEach((row, i) => { let f = 0; for (const ch of row) {
+    if (/\d/.test(ch)) f += +ch; else { g["abcdefgh"[f] + (8 - i)] = ch; f++; } } });
+  return [g, turn === "b" ? "b" : "w"];
+}
+function gridToFen() {
+  let rows = [];
+  for (let r = 8; r >= 1; r--) { let row = "", e = 0;
+    for (const f of "abcdefgh") { const p = ed.grid[f + r]; if (p) { if (e) row += e; e = 0; row += p; } else e++; }
+    if (e) row += e; rows.push(row); }
+  return rows.join("/") + " " + ed.turn + " - - 0 1";
+}
+function drawEditor() {
+  const human = last.s && last.s.robot_color === "white" ? "black" : "white";
+  const ranks = human === "white" ? [8,7,6,5,4,3,2,1] : [1,2,3,4,5,6,7,8];
+  const files = human === "white" ? "abcdefgh".split("") : "hgfedcba".split("");
+  let h = "";
+  for (const r of ranks) { h += `<div class="ed-lab">${r}</div>`;
+    for (const f of files) { const sq = f + r, p = ed.grid[sq], light = ("abcdefgh".indexOf(f) + r) % 2 === 1;
+      h += `<div class="ed-sq ${light ? "l" : "d"} ${ed.unsure.includes(sq) ? "unsure" : ""}" data-sq="${sq}">` +
+           (p ? `<span class="${p === p.toUpperCase() ? "pw" : "pb"}">${GLYPH[p]}</span>` : "") + `</div>`; } }
+  h += `<div></div>` + files.map((f) => `<div class="ed-lab">${f}</div>`).join("");
+  $("edBoard").innerHTML = h;
+  $("edBoard").querySelectorAll(".ed-sq").forEach((c) => (c.onclick = () => {
+    const sq = c.dataset.sq;
+    if (!ed.sel || ed.grid[sq] === ed.sel) delete ed.grid[sq]; else ed.grid[sq] = ed.sel;
+    ed.unsure = ed.unsure.filter((x) => x !== sq); drawEditor(); }));
+  $("palette").innerHTML = "KQRBNPkqrbnp".split("").map((p) =>
+    `<div class="pal ${ed.sel === p ? "sel" : ""}" data-p="${p}"><span class="${p === p.toUpperCase() ? "pw" : "pb"}">${GLYPH[p]}</span></div>`).join("")
+    + `<div class="pal erase ${ed.sel === null ? "sel" : ""}" data-p="">eraser</div>`;
+  $("palette").querySelectorAll(".pal").forEach((c) => (c.onclick = () => { ed.sel = c.dataset.p || null; drawEditor(); }));
+  $("edTurn").textContent = ed.turn === "w" ? "white" : "black";
+  $("edFen").value = gridToFen();
+  const n = Object.keys(ed.grid).length, kw = Object.values(ed.grid).filter((p) => p === "K").length, kb = Object.values(ed.grid).filter((p) => p === "k").length;
+  if (!$("edMsg").dataset.keep) $("edMsg").textContent = `${n} pieces` + (kw !== 1 || kb !== 1 ? " · needs exactly one king each to play" : "");
+}
+function loadFen(fen, msg) { [ed.grid, ed.turn] = fenToGrid(fen); $("edMsg").dataset.keep = msg ? "1" : ""; $("edMsg").textContent = msg || ""; drawEditor(); delete $("edMsg").dataset.keep; }
+function openEditor() { ed.unsure = []; ed.fromCamera = false; loadFen(last.s ? last.s.fen : START); $("modal").classList.add("show"); }
+async function readBoard(intoEditor) {
+  const j = await post("/api/read_board", {}, true);
+  if (!j || j.error) return;
+  if (!intoEditor) openEditor();
+  ed.unsure = j.unsure || []; ed.fromCamera = true;
+  loadFen(j.fen, `read ${j.pieces} pieces from ${j.readings} webcam readings` + (j.unsure.length ? ` · check the orange squares: ${j.unsure.join(" ")}` : "") + (j.valid ? "" : " · not a legal position yet"));
+}
+$("editBtn").onclick = openEditor;
+$("readBtn").onclick = () => readBoard(false);
+$("recheckBtn").onclick = () => act("recheck");
+const estop = () => post("/api/action", { action: "stop" }, true).then((j) => j && !j.error && toast("■ STOPPED: the arm is frozen", true));
+$("stopBtn").onclick = estop;
+$("torqueBtn").onclick = () => {
+  const on = last.s ? last.s.torque : true;
+  if (on && !confirm("Torque OFF: all motors go limp and the arm DROPS. Hold the arm first. Continue?")) return;
+  post("/api/action", { action: on ? "torque_off" : "torque_on" }, true).then((j) => j && !j.error && toast(on ? "🔓 torque off: the arm is limp" : "🔒 torque on: holding"));
+};
+$("syncSw").onclick = () => act(last.s && last.s.live_sync ? "live_sync_off" : "live_sync_on");
+$("startBtn").onclick = () => { if (confirm("Reset the game to the normal start position?")) post("/api/position", { preset: "start" }); };
+$("edStart").onclick = () => { ed.unsure = []; loadFen(START); };
+$("edClear").onclick = () => { ed.unsure = []; ed.grid = {}; drawEditor(); };
+$("edCurrent").onclick = () => { ed.unsure = []; loadFen(last.s.fen); };
+$("edRead").onclick = () => readBoard(true);
+$("edTurn").onclick = () => { ed.turn = ed.turn === "w" ? "b" : "w"; drawEditor(); };
+$("edFen").onchange = () => { try { loadFen($("edFen").value); } catch (e) { toast("not a FEN", true); } };
+$("edCancel").onclick = () => $("modal").classList.remove("show");
+$("edApply").onclick = async () => { const j = await post("/api/position", { fen: gridToFen(), from_camera: ed.fromCamera });
+  if (j && !j.error) { $("modal").classList.remove("show"); if (ed.fromCamera) toast("✓ position set, and saved as training data for YOLO"); } };
+$("modal").onclick = (e) => { if (e.target.id === "modal") $("modal").classList.remove("show"); };
+
+poll();
+</script>
+</body>
+</html>

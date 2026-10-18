@@ -1,0 +1,11 @@
+{
+  "task": "rook g3 to b8",
+  "fps": 30,
+  "frames": 925,
+  "seconds": 30.83,
+  "black_frames": {
+    "wrist": 0,
+    "webcam": 925
+  },
+  "board_calibrated": true
+}

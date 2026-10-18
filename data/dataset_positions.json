@@ -1,0 +1,107 @@
+[
+ {
+  "id": 1,
+  "name": "start",
+  "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+ },
+ {
+  "id": 2,
+  "name": "game1 move 4",
+  "fen": "rnq1kbnr/pbpppppp/8/1P6/7P/8/PP1PPPP1/RNBQKBNR w KQkq - 1 4"
+ },
+ {
+  "id": 3,
+  "name": "game1 move 8",
+  "fen": "r1q1kbnr/1bpppp1p/n5p1/1N6/3P3P/5N2/PP2PPP1/R1BQKB1R w KQkq - 1 8"
+ },
+ {
+  "id": 4,
+  "name": "game1 move 16",
+  "fen": "r3k2r/1qp2pb1/n3pnp1/3p3p/3P3P/2N3P1/PP2PP2/R1BQKB1R w Qkq - 0 16"
+ },
+ {
+  "id": 5,
+  "name": "game1 move 19",
+  "fen": "1n2k2r/r1p2pb1/4pnp1/1N1p3p/Q2P3P/P5P1/1P2PP2/R1B1KB1R w Qk - 1 19"
+ },
+ {
+  "id": 6,
+  "name": "game2 move 4",
+  "fen": "r1bqkbnr/p1pp1ppp/p1n5/4p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4"
+ },
+ {
+  "id": 7,
+  "name": "game2 move 19",
+  "fen": "r3kb1n/n1p2pp1/p7/1pP1pb2/1P5P/5PPq/PB1P4/R4RK1 w q - 1 19"
+ },
+ {
+  "id": 8,
+  "name": "game2 move 23",
+  "fen": "2kr1b1n/2p2pp1/2n5/1pP1Bb2/pP4PP/3P1P1q/P7/R3R1K1 w - - 1 23"
+ },
+ {
+  "id": 9,
+  "name": "game2 move 31",
+  "fen": "2kr1b2/n1p2pp1/2P5/1p5P/pP2b1P1/2B2q2/P3n2K/RR6 w - - 3 31"
+ },
+ {
+  "id": 10,
+  "name": "game3 move 4",
+  "fen": "rnbqkbnr/1p2pppp/8/p1pp4/8/2P1P1P1/PP1P1P1P/RNBQKBNR w KQkq - 0 4"
+ },
+ {
+  "id": 11,
+  "name": "game3 move 10",
+  "fen": "r3kbnr/1q1bpppp/2n5/pppp4/3P4/2P1PNP1/PP1B1PBP/RNQ1K1R1 w Qkq - 0 10"
+ },
+ {
+  "id": 12,
+  "name": "game3 move 16",
+  "fen": "r3kb1r/1q1bpp1p/2n5/p5p1/1p1pB2N/2P1B1P1/PP3P1P/RNQ1K1R1 w Qkq - 0 16"
+ },
+ {
+  "id": 13,
+  "name": "game3 move 23",
+  "fen": "r3kb1r/q3pp1p/2n5/5Q2/1p2B1p1/N1P3P1/1P1K2NP/R5b1 w kq - 0 23"
+ },
+ {
+  "id": 14,
+  "name": "game4 move 4",
+  "fen": "r1b1kbnr/pppp1ppp/2n5/4p3/3PP2q/5N2/PPP2PPP/RNBQKB1R w KQkq - 1 4"
+ },
+ {
+  "id": 15,
+  "name": "game4 move 6",
+  "fen": "rnb1k1nr/ppppbppp/8/4P3/4P2N/8/PPP2PPP/RNBQKB1R w KQkq - 1 6"
+ },
+ {
+  "id": 16,
+  "name": "game4 move 16",
+  "fen": "r1b1kbr1/pppp4/n7/4p1p1/1PP1P2B/P7/4KPPP/RN1Q1BR1 w - - 0 16"
+ },
+ {
+  "id": 17,
+  "name": "game4 move 27",
+  "fen": "1r6/pppb1k2/3p4/R3p1B1/1QP1PPp1/8/2N1B1PP/3K2R1 w - - 3 27"
+ },
+ {
+  "id": 18,
+  "name": "K+Q vs K",
+  "fen": "8/8/8/3k4/8/8/3QK3/8 w - - 0 1"
+ },
+ {
+  "id": 19,
+  "name": "K+R vs K+R",
+  "fen": "8/2r5/3k4/8/8/4K3/5R2/8 w - - 0 1"
+ },
+ {
+  "id": 20,
+  "name": "minor pieces",
+  "fen": "8/2n1b3/3k4/8/8/2NKB3/8/8 w - - 0 1"
+ },
+ {
+  "id": 21,
+  "name": "queens + pawns",
+  "fen": "4k3/pp3qpp/8/8/8/8/PP3QPP/4K3 w - - 0 1"
+ }
+]

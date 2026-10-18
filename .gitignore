@@ -1,0 +1,42 @@
+# ---- Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# ---- Editors / OS
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.log
+
+# ---- Big downloads: fetched again by setup/download_models.sh
+bin/stockfish
+data/models/
+weights/
+
+# ---- Model weights (too big for git; the trained one is data/yolo/best.pt: share it as a GitHub release,
+#      or retrain it from data/dataset with `python -m chess_player.vision.train_yolo`)
+*.pt
+*.onnx
+
+# ---- Generated (re-created by the tools)
+data/yolo_runs/
+data/runs/
+data/yolo_work/
+data/sim/
+data/dataset/previews/
+data/dataset/*_backup*/
+data/*_check.jpg
+data/look_view.jpg
+
+# ---- Teleop demos: keep the joint logs (poses.csv, info.json), not the videos (1+ GB)
+data/demos/**/*.mp4
+data/demos/_unsaved*/
+data/demos/_old_calibration/
+
+# ---- Live state of this machine's real board (rewritten every move)
+data/board_state.json

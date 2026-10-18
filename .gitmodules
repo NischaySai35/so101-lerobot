@@ -1,0 +1,3 @@
+[submodule "external/chess-player"]
+	path = external/chess-player
+	url = https://github.com/Nithya-shree182/chess-player.git

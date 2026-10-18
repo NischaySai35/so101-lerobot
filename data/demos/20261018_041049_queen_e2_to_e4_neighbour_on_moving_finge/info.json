@@ -1,0 +1,11 @@
+{
+  "task": "queen e2 to e4, neighbour on moving-finger side d2",
+  "fps": 30,
+  "frames": 1262,
+  "seconds": 42.07,
+  "black_frames": {
+    "wrist": 0,
+    "webcam": 1262
+  },
+  "board_calibrated": true
+}

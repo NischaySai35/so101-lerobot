@@ -1,0 +1,13 @@
+{
+  "small": 13.4,
+  "big": 15.6,
+  "empty": 4.5,
+  "note": "teleop demos, pieces held at their base: rook 10.3-10.6 %, queen 12.1 %; x1.2914 on 2026-10-18 when the follower gripper range was matched to the leader (same jaw positions)",
+  "per_piece": {
+    "p": 15.2,
+    "r": 13.3,
+    "q": 16.4,
+    "k": 16.4
+  },
+  "per_piece_note": "2026-10-18: jaw reading while holding, from all demos (old ones x1.2914): pawn 14.7-15.6, rook 13.0-13.7, queen 15.6-17.2; king = queen (same 23 mm base, no demo). n/b use 'small'."
+}

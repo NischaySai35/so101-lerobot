@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "so101-chess"
+version = "0.1.0"
+description = "SO-101 chess robot: planner, vision, game pipeline"
+requires-python = ">=3.10"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["chess_player*"]
+
+[tool.setuptools.package-data]
+chess_player = ["ui/index.html", "urdf/*.urdf", "urdf/assets/*.stl"]

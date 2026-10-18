@@ -1,0 +1,11 @@
+{
+  "task": "queen e2 to e4, neighbours both sides d2 f2",
+  "fps": 30,
+  "frames": 1118,
+  "seconds": 37.27,
+  "black_frames": {
+    "wrist": 0,
+    "webcam": 1118
+  },
+  "board_calibrated": true
+}

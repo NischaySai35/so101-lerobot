@@ -1,0 +1,9 @@
+{
+  "task": "pawn e2 to e4, neighbour on fixed-finger side",
+  "fps": 30,
+  "frames": 647,
+  "seconds": 21.57,
+  "black_frames": {},
+  "board_calibrated": true,
+  "recovered": "stopped with Ctrl+C before saving (2026-10-18); videos may be unfinished"
+}

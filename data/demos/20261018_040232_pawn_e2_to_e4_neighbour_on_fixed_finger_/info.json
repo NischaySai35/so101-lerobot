@@ -1,0 +1,11 @@
+{
+  "task": "pawn e2 to e4, neighbour on fixed-finger side",
+  "fps": 30,
+  "frames": 1185,
+  "seconds": 39.5,
+  "black_frames": {
+    "wrist": 0,
+    "webcam": 1185
+  },
+  "board_calibrated": true
+}

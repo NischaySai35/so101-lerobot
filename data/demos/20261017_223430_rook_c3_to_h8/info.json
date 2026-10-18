@@ -1,0 +1,11 @@
+{
+  "task": "rook c3 to h8",
+  "fps": 30,
+  "frames": 1009,
+  "seconds": 33.63,
+  "black_frames": {
+    "wrist": 0,
+    "webcam": 1009
+  },
+  "board_calibrated": true
+}
