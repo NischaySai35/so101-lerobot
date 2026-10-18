@@ -12,6 +12,64 @@ commentary is off by default (`VOICE_COMMENTARY` in config).
 
 All the commands are in **[commands.md](commands.md)**. This page explains how it fits together.
 
+## How it works, in plain English
+
+Think of the robot as four helpers working together:
+
+1. **Eyes: two cameras + YOLO.** A webcam on your side of the table and a small camera on the robot's gripper
+   (the "robot eye") film the board. **YOLO** ("You Only Look Once") is an AI that finds objects in a picture and
+   draws a box around each one: here, every chess piece, with its type and colour. A calibration tells the program
+   where each of the 64 squares is in each camera's picture, so every box becomes "white knight on g1". The two
+   cameras check each other: pieces hidden from the webcam behind others are seen by the robot eye, and a piece's
+   type only changes when both agree.
+2. **Brain: Stockfish.** Stockfish is a free chess engine, one of the strongest in the world (much stronger than
+   any human). Given the position, it returns the best move in about a second. Its strength can be turned down
+   for friendlier games (`--skill 0-20`). **python-chess** keeps the official game: whose turn it is, which moves
+   are legal, check, mate.
+3. **Hand: the SO-101 arm.** A small 6-motor robot arm. To move a piece, the program works out where the gripper
+   has to be in 3-D (board position → robot position, from a calibration where the gripper touched the board's
+   corners), then which angle each motor needs for that (**inverse kinematics**, using a 3-D model of the arm).
+   How to grab, how far to open the gripper, how high to lift and how to let go were **learned from teleop
+   demonstrations**: a person moved the robot through real moves with a second "leader" arm while everything was
+   recorded, and the recordings were turned into numbers. Before every move a **collision check** makes sure the
+   fingers won't knock over a neighbouring piece; if they would, Robo asks you to make that move.
+4. **Voice: Robo.** Optional. It understands spoken commands ("robot, play", "robot, knight f6") through
+   **Whisper** (speech → text), speaks with **Piper** (text → speech), and answers questions about the game and
+   what the cameras see with **Qwen3.5-2B**, a small vision-language model running on the laptop.
+
+**One move, start to finish:**
+
+- **The robot's turn.**
+  1. Stockfish picks the move, e.g. Nf3.
+  2. The planner checks that the arm can reach it and won't hit anything.
+  3. The arm opens the gripper over g1, steps sideways (one finger is fixed, so the open finger has to go around
+     the piece), goes down, closes and checks that it is really holding the piece.
+  4. It lifts straight up, carries the piece high, lowers it on f3 and opens just enough to let go.
+  5. It goes back to its resting pose, and the cameras check the from and to squares look right.
+- **Your turn.** You move a piece by hand. When nothing has moved for about a second (your hand is gone), the
+  program compares what the cameras see with every legal move and picks the one that matches. If what it sees
+  isn't legal (say you're in check), it tells you why and lists your legal moves.
+- **The window** shows everything live: both cameras with their boxes, the game board (hover a piece to see its
+  moves and what each camera reads there), whose turn it is, Stockfish's evaluation, a log, and a red **STOP**
+  button that freezes the arm instantly.
+
+## Technologies
+
+| What | Used for |
+|---|---|
+| **SO-101 arm** + **Feetech STS3215** servo motors | the robot (a follower arm, plus a leader arm for teaching) |
+| **LeRobot** (Hugging Face, Seeed fork) | motor drivers, arm calibration, teleoperation |
+| **placo** + the SO-101 **URDF** (3-D model) | inverse kinematics: gripper position ↔ motor angles |
+| **Stockfish 19** | chess engine: picks the robot's moves, evaluates the position |
+| **python-chess** | game rules, legal moves, move notation |
+| **YOLOv8m** (Ultralytics) | piece detection; started from the public pretrained model *KanisornPutta/chess-model-yolov8m*, fine-tuned on 105 photos of this board (21 positions, labelled automatically) → `data/yolo/best.pt` |
+| **OpenCV** | cameras, board grid (homography), image processing |
+| **Whisper-small** (OpenAI, via transformers) | speech recognition for Robo |
+| **Piper** (`en_US-ryan-medium`) | Robo's voice |
+| **Qwen3.5-2B** (vision-language model) | Robo's answers to questions, with both camera pictures |
+| **PyTorch + CUDA** | runs YOLO, Whisper and Qwen on the laptop's GPU |
+| **Python HTTP server + HTML/JS page** (Chrome app window) | the pipeline window |
+
 ## Status (2026-10-18)
 
 | Part | State |
@@ -20,14 +78,16 @@ All the commands are in **[commands.md](commands.md)**. This page explains how i
 | Board ↔ robot calibration | ✅ 3.9 mm fit error |
 | Pick & place (grasp at the piece base, collision check, drop detection + retry) | ✅ works |
 | Tight-spot grasp (pieces right next to it), learned from 3 crowded teleop demos | ✅ added 2026-10-18, check on the real arm |
-| Pick correction (4 mm lower, 4 mm toward the fixed finger at the pick) | ✅ added 2026-10-18, check on the real arm |
+| Pick correction (6 mm toward the arm, 4 mm toward the fixed finger, at the pick only) | ✅ added 2026-10-18 |
 | Arm speed | ✅ 0.8× by default (`ARM_SPEED` in config) |
-| Webcam board reading (YOLO, pretrained model) | ✅ works, but mixes up some pieces (see below) |
+| Webcam board reading (YOLO) | ✅ works |
 | Robot-eye second opinion (both cameras agree before a piece's type changes) | ✅ added 2026-10-18 |
 | King/queen height check | ✅ added 2026-10-18 |
 | Pipeline window (game, board, cameras, Robo, STOP, torque) | ✅ works |
 | Robo voice (Whisper + Piper + Qwen3.5-2B) | ✅ works, short replies; mic off by default |
-| **Own YOLO model fine-tuned on this board** | ⏳ **not started**: no training data yet (`data/dataset/` is empty) |
+| Own YOLO model fine-tuned on this board (105 photos, 21 positions) | ✅ 2026-10-18: ~98 % of pieces found and named correctly on unseen positions |
+| Start position snap (king e1 / queen d1 whatever the cameras guess) | ✅ added 2026-10-18 |
+| Post-move check (only the squares the robot's move changed) | ✅ added 2026-10-18 |
 
 ## Quick start
 
@@ -68,7 +128,8 @@ The two cameras check each other:
    calibration. A reading counts once 3 frames in a row agree on which squares are occupied
    (no hand over the board); each square's piece type is a majority vote over the last 6 frames.
 2. **Robot eye**: only while the arm rests at its look pose. YOLO runs on the gripper image too, and its pieces are
-   matched to the webcam's by colour and position.
+   matched to the webcam's by colour and position. It also adds pieces the webcam can't see (e.g. black pawns
+   hidden behind the back rank), if it sees them steadily and well inside a square.
 3. **Combining them:**
    - Which squares are occupied, and by which colour, comes from the webcam (it sees every square).
    - The **type** of a known piece only changes when both cameras agree, or when the webcam alone is very sure and
@@ -78,21 +139,24 @@ The two cameras check each other:
 4. **King vs queen:** the pieces are 64 mm vs 58 mm tall. When YOLO isn't sure (below 85 %), the height measured
    from the webcam image decides.
 
-**Live sync** (on by default) keeps the game board matching the real board while no game is running. Red squares
-on the board mean the cameras see something different there. Orange outlines mean an unsure reading.
+**Live sync** (on by default) keeps the game board matching the real board while no game is running. A change is
+adopted only after the cameras have shown it for 1.2 s, so a flickering square doesn't flip the board. When the
+cameras see the starting setup, the board becomes the exact standard start (king e1, queen d1, White to move).
+Red squares on the board mean the cameras see something different there. Orange outlines mean an unsure reading.
 
 **The robot eye calibrates itself.** At startup, the webcam's reading of the pieces is matched to the gripper
 image. The grid is then lined up with the light and dark squares and snapped to the square corners. It is only
 re-fitted when the saved fit stops matching. To redo it, use ⟳ calibrate on the Robot eye tile. Check the result
 in `data/wrist_corners_check.jpg`.
 
-**For better accuracy, fine-tune YOLO.** The model is a public pretrained chess model, not trained on these pieces,
-and that is the main source of misreads.
+**Our own YOLO model.** The public chess model was fine-tuned on this board, these pieces and this webcam angle
+(`data/dataset/`: 105 photos of 21 positions; the labels are computed from the known position, no hand drawing).
+40 epochs; it finds and names ~98 % of the pieces on positions it never saw. To improve it, add positions and
+retrain (more variety helps; more epochs don't):
 
-1. Run `python -m chess_player.vision.capture_dataset --presets 1-21`. It shows each position to set up, and Enter
-   takes 5 labelled shots.
-2. Run `python -m chess_player.vision.train_yolo`. It writes `data/yolo/best.pt`, which the pipeline uses
-   automatically.
+1. `python -m chess_player.vision.capture_dataset --presets 1-21 --shots 5` shows each position to set up (as seen
+   from your seat), Enter takes 5 labelled shots.
+2. `python -m chess_player.vision.train_yolo` writes `data/yolo/best.pt`, which the pipeline uses automatically.
 
 Every corrected reading you **Apply** in the position editor is also saved as training data.
 

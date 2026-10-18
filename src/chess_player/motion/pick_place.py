@@ -238,6 +238,11 @@ class PickPlace:
         self.verify_grasp = verify_grasp
         self.log = log
 
+    def _target(self, p):
+        """Board-mm point -> robot-frame IK target, with the measured whole-motion trim (ARM_TARGET_OFFSET_MM)."""
+        dx, dy = C.ARM_TARGET_OFFSET_MM
+        return self.T(p[0] + dx, p[1] + dy, p[2])
+
     # ---------------------------------------------------------------- planning
     def _line(self, xy0, z0, xy1, z1, seed, max_tilt, step_mm=8.0, pts=None):
         """Joint waypoints (arm joints only) along a straight line in board coordinates. Appends the board-mm
@@ -247,7 +252,7 @@ class PickPlace:
         qs, q = [], seed
         for s in np.linspace(0, 1, n):
             p = p0 + (p1 - p0) * s
-            q = solve_or_raise(self.ik, self.T(*p), q, max_tilt, what=f"point {np.round(p)} mm")
+            q = solve_or_raise(self.ik, self._target(p), q, max_tilt, what=f"point {np.round(p)} mm")
             qs.append(q)
             if pts is not None:
                 pts.append(p)
@@ -264,7 +269,7 @@ class PickPlace:
         """IK along explicit board-mm xyz points."""
         qs, q = [], seed
         for p in points:
-            q = solve_or_raise(self.ik, self.T(*p), q, max_tilt, what=f"point {np.round(p)} mm")
+            q = solve_or_raise(self.ik, self._target(p), q, max_tilt, what=f"point {np.round(p)} mm")
             qs.append(q)
         return qs
 
@@ -331,7 +336,7 @@ class PickPlace:
         for q in dg[-3:]:  # the last stretch of the descent must be near vertical
             self._tilt_check(q, t.label)
         z_lift0, z_lift1 = z_grasp + C.LIFT_MM, z_place + C.LIFT_MM
-        p_down2, p_up2 = [], []
+        p_down2, p_up2 = [], []  # (filled below)
         p_up = self._points(src_xy, z_grasp, src_xy, z_lift0, step_mm=4.0)
         up = self._path(ramp(p_up, 1, 0), dg[-1])  # lift; the correction eases out
         # the carried piece's path (its centre is JAW_SHIFT_MM right of the tip) decides height and route
@@ -342,11 +347,16 @@ class PickPlace:
         u_tr = [(u_src * (1 - i / n) + u_dst * (i / n)) / np.linalg.norm(u_src * (1 - i / n) + u_dst * (i / n))
                 for i in range(len(piece_path))]
         p_travel = [np.r_[p[:2] - C.HELD_OFFSET_MM * u, p[2]] for p, u in zip(piece_path, u_tr)]
-        travel = self._path(p_travel, up[-1])
-        down2 = self._line(dst_xy, z_lift1, dst_xy, z_place, travel[-1], 90.0, step_mm=4.0, pts=p_down2)
+        # place-only trim (PLACE_EXTRA_OFFSET_MM): commanded positions only, eased in over the carry; the points kept
+        # for the collision check stay where the piece really goes
+        place_off = np.r_[np.asarray(C.PLACE_EXTRA_OFFSET_MM, float), 0.0]
+        travel = self._path([p + place_off * f for p, f in zip(p_travel, np.linspace(0, 1, len(p_travel)))], up[-1])
+        p_down2 = self._points(dst_xy, z_lift1, dst_xy, z_place, step_mm=4.0)
+        down2 = self._path([p + place_off for p in p_down2], travel[-1])
         for q in down2[-3:]:
             self._tilt_check(q, t.label)
-        up2 = self._line(dst_xy, z_place, dst_xy, C.Z_SAFE, down2[-1], 90.0, pts=p_up2)  # retreat, jaws open
+        p_up2 = self._points(dst_xy, z_place, dst_xy, C.Z_SAFE)
+        up2 = self._path([p + place_off for p in p_up2], down2[-1])  # retreat, jaws open
         if obstacles:
             held_gap = 0.0 if tight else C.RELEASE_GAP_MM  # while holding, the moving finger hugs the piece
             path = ([(p, u_src, False, False) for p in p_down + p_side + p_dg]
@@ -428,6 +438,7 @@ class PickPlace:
         """Straight up from wherever the arm stopped, to the safe height, jaws open."""
         q = np.array([self.arm.joints()[j] for j in C.ARM_JOINTS])
         p = self.T.R.T @ (self.ik.fk(q)[:3, 3] - self.T.t) * 1000
+        p[:2] -= np.asarray(C.ARM_TARGET_OFFSET_MM)  # back to "where the planner meant", like every other point
         try:
             up = self._line(p[:2], max(p[2], 0.0), p[:2], C.Z_SAFE, q, 90.0)
             self._follow(up, C.GRIPPER_OPEN, C.DESCEND_S)

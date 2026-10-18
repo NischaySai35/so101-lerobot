@@ -120,9 +120,17 @@ HELD_OFFSET_MM = 4.0  # once gripped, the moving finger has pushed the piece aga
 # Pick-up correction measured on the real arm (2026-10-18), for the PICK only (placing unchanged): at the grasp the
 # tip goes this much further toward the robot's base (along the board), further toward the fixed finger (the
 # "go left" step), and lower (vertical; 0 = the demonstrated grasp height).
-PICK_EXTRA_TOWARD_ARM_MM = 6.0
+PICK_EXTRA_TOWARD_ARM_MM = 4.0  # (was 6; 2026-10-18 picks 2 mm away from the robot)
 PICK_EXTRA_LEFT_MM = 4.0
 PICK_EXTRA_DOWN_MM = 0.0
+# Whole-motion trim (board mm: +x = toward the h-file, +y = toward rank 8). 2026-10-18: picks and places landed
+# ~2 mm toward the top right as seen from the human's seat (toward rank 1 and the a-file), so every arm target is
+# moved 2 mm toward the h-file and 2 mm toward rank 8. The collision check is unaffected (it uses the real squares).
+ARM_TARGET_OFFSET_MM = (2.0, 2.0)
+# Place-only trim on top of that (same axes: +x = toward the h-file, +y = toward rank 8). 2026-10-18: pick perfect;
+# the place goes 12 mm to the ROBOT's left (toward the a-file) and 1 mm away from the robot (toward rank 8).
+# Eased in during the carry.
+PLACE_EXTRA_OFFSET_MM = (-12.0, 1.0)
 GRIPPER_OPEN = 28.4  # (22 before the 2026-10-18 gripper re-range, x1.2914) % open before descending (demos: 20-32 %, median 21; wider hits neighbours)
 DROP_DETECT_PCT = 3.9  # while carrying: jaws closing this much past the holding reading = the piece slipped out
 RECOVERY_ATTEMPTS = 2  # after a failed grab / drop: look with the webcam and retry this many times

@@ -669,6 +669,8 @@ class Conductor:
                 b.set_piece_at(sq, chess.Piece.from_symbol(sym))
         b.turn = self.s.board.turn
         b.castling_rights = b.clean_castling_rights()
+        if GS.looks_like_start(b):  # the starting setup: exact standard position (king e1, queen d1, White to move)
+            b, unsure = chess.Board(), []
         return b.fen(), {"readings": len(hist), "pieces": len(b.piece_map()), "unsure": unsure, "valid": b.is_valid()}
 
     def job_manual(self, src, dst, sync=True):
